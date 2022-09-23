@@ -30,16 +30,42 @@
           break;
       }
 
-      let resText = await response.text();
-
-      if (method === 'get') {
+      // head requests don't send back information,
+      // so will say data recieved
+      if (parseResponse) {
+        content.innerHTML += '<p>Meta Data Received</p>';
       }
-      else if (method === 'head') {
-      }
+      // will send back json for get and post
       else {
-        
+        let obj = await response.json();
+        let jsonString = JSON.stringify(obj);
+        content.innerHTML += `<p>${jsonString}</p>`;
       }
     }
+
+    // sends post requests
+    const sendPost = async (nameForm) => {
+      const nameAction = nameForm.getAttribute('action');
+      const nameMethod = nameForm.getAttribute('method');
+      const nameField = nameForm.querySelector('#nameField');
+      const ageField = nameForm.querySelector('#ageField');
+
+      const formData = `name=${nameField.value}&age${ageField.value}`;
+
+      // makes a fetch request
+      let response = await fetch(nameAction, {
+        method: nameMethod,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json',
+        },
+        body: formData,
+      });
+
+      // handles the response
+      handleResponse(response, false);
+      
+    } 
 
     // sends request
     const requestUpdate = async (getUserForm) => {
@@ -55,7 +81,8 @@
       });
 
       // calls handleResponse when we get a response
-      handleResponse(response, method);
+      // send true for method only on head requests
+      handleResponse(response, method === 'head');
     }
 
     const init = () => {
