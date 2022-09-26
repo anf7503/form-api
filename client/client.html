@@ -7,7 +7,7 @@
 
   <script>
     // appends response data to the page
-    const handleResponse = async (response, parseResponse) => {
+    const handleResponse = async (response, parseResponse, getUsers) => {
       // grabs the content section
       const content = document.querySelector("#content");
 
@@ -25,6 +25,9 @@
         case 400:
           content.innerHTML = `<b>Bad Request</b>`;
           break;
+        case 404:
+          content.innerHTML = `<b>Not Found</b>`;
+          break;
         default:
           content.innerHTML = `<b>Status Code Not Implemented By Client</b>`;
           break;
@@ -33,13 +36,14 @@
       // head requests don't send back information,
       // so will say data recieved
       if (parseResponse) {
-        content.innerHTML += '<p>Meta Data Received</p>';
-      }
-      // will send back json for get and post
-      else {
-        let obj = await response.json();
-        let jsonString = JSON.stringify(obj);
-        content.innerHTML += `<p>${jsonString}</p>`;
+        if (getUsers) {
+          let obj = await response.json();
+          let jsonString = JSON.stringify(obj);
+          content.innerHTML += `<p>${jsonString}</p>`;
+        } else {
+          let obj = await response.json();
+          content.innerHTML += `<p>Message: ${obj.message}</p>`;
+        }
       }
     }
 
@@ -50,7 +54,7 @@
       const nameField = nameForm.querySelector('#nameField');
       const ageField = nameForm.querySelector('#ageField');
 
-      const formData = `name=${nameField.value}&age${ageField.value}`;
+      const formData = `name=${nameField.value}&age=${ageField.value}`;
 
       // makes a fetch request
       let response = await fetch(nameAction, {
@@ -63,18 +67,18 @@
       });
 
       // handles the response
-      handleResponse(response, false);
-      
-    } 
+      handleResponse(response, true, false);
+
+    }
 
     // sends request
-    const requestUpdate = async (getUserForm) => {
-      const url = getUserForm.querySelector('#urlField').value;
-      const method = getUserForm.querySelector('#methodSelect').value;
+    const requestUpdate = async (userForm) => {
+      const url = userForm.querySelector('#urlField').value;
+      const method = userForm.querySelector('#methodSelect').value;
 
       // makes the fetch request
       let response = await fetch(url, {
-        method,
+        method: method,
         headers: {
           'Accept': 'application/json'
         },
@@ -82,17 +86,17 @@
 
       // calls handleResponse when we get a response
       // send true for method only on head requests
-      handleResponse(response, method === 'head');
+      handleResponse(response, method === 'get', url === '/getUsers');
     }
 
     const init = () => {
       // grab the two forms
       const addUserForm = document.querySelector("#nameForm");
       const getUserForm = document.querySelector("#userForm");
-      
+
       const addUser = (e) => {
         e.preventDefault();
-        sendPost(nameForm);
+        sendPost(addUserForm);
         return false;
       }
 
@@ -103,8 +107,8 @@
       }
 
       // add the callbacks to the two forms
-      addUserForm.addEventListener('submit', () => addUser);
-      getUserForm.addEventListener('submit', () => getUsers);
+      addUserForm.addEventListener('submit', addUser);
+      getUserForm.addEventListener('submit', getUsers);
     }
 
     window.onload = init;

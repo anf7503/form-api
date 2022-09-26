@@ -1,80 +1,93 @@
+// local users
 const users = {};
 
-// send the response
-const respond = (request, response, status, type, content) => {
-    console.log(content);
-    response.writeHead(status, { 'Content-Type': type });
-    response.write(content);
-    response.end();
+// sends the response
+const respondJSON = (request, response, status, content) => {
+  console.log(content);
+  response.writeHead(status, { 'Content-Type': 'application/json' });
+  response.write(JSON.stringify(content));
+  response.end();
+};
+// sends a no body response
+const respondJSONMeta = (request, response, status) => {
+  response.writeHead(status, { 'Content-Type': 'application/json' });
+  response.end();
 };
 
-const getUsers = (request, response, acceptedTypes) => {
-    const responseJson = {
-        message: 'This is a successful response.',
-    };
+// returns the users
+const getUsers = (request, response) => {
+  const responseJson = {
+    users,
+  };
 
-    // default (JSON) Path
-    const resString = JSON.stringify(responseJson);
-
-    return respond(request, response, 200, 'application/json', resString);
+  return respondJSON(request, response, 200, responseJson);
 };
 
-const notReal = (request, response, acceptedTypes, params) => {
-    const responseJson = {
-        message: 'You have successfully viewed the content.',
-    };
+// return the users for HEAD requests
+const getUsersMeta = (request, response) => respondJSONMeta(request, response, 200);
 
-    // handles if request does not contain a valid-true query parameter
-    if (!params.loggedIn || params.loggedIn !== 'yes') {
-        responseJson.message = 'Missing loggedIn query parameter set to yes';
-        responseJson.id = 'unauthorized';
-        // XML Path
-        if (acceptedTypes[0] === 'text/xml') {
-            let responseXML = '<response>';
-            responseXML += `<message>${responseJson.message}</message>`;
-            responseXML += `<id>${responseJson.id}</id>`;
-            responseXML += '</response>';
+// returns a not found request
+const notReal = (request, response) => {
+  const responseJson = {
+    message: 'The page you are looking for was not found.',
+    id: 'notFound',
+  };
 
-            return respond(request, response, 401, 'text/xml', responseXML);
-        }
-        const resString = JSON.stringify(responseJson);
-
-        return respond(request, response, 401, 'application/json', resString);
-    }
-
-    // default (JSON) Path
-    const resString = JSON.stringify(responseJson);
-
-    return respond(request, response, 200, 'application/json', resString);
+  return respondJSON(request, response, 404, responseJson);
 };
 
-const addUser = (request, response, acceptedTypes, params) => {
-    const responseJson = {
-        message: 'Name and age are both required.',
-        id: 'addUserMissingParams'
-    };
+// returns a not found HEAD request
+const notRealMeta = (request, response) => respondJSONMeta(request, response, 404);
 
-    // default (JSON) Path
-    const resString = JSON.stringify(responseJson);
+// adds or updates a user
+const addUser = (request, response, body) => {
+  const responseJson = {
+    message: 'Name and age are both required.',
+  };
 
-    return respond(request, response, 400, 'application/json', resString);
+  if (!body.name || !body.age) {
+    responseJson.id = 'missingParams';
+    return respondJSON(request, response, 400, responseJson);
+  }
+
+  let responseCode = 204;
+
+  if (!users[body.name]) {
+    responseCode = 201;
+    users[body.name] = {};
+  }
+
+  users[body.name].name = body.name;
+  users[body.name].age = body.age;
+
+  if (responseCode === 201) {
+    responseJson.message = 'Created Successfully';
+    return respondJSON(request, response, responseCode, responseJson);
+  }
+
+  return respondJSONMeta(request, response, responseCode);
+};
+// returns not found for any unspecified url
+const notFound = (request, response) => {
+  const responseJson = {
+    message: 'The page you are looking for was not found.',
+    id: 'notFound',
+  };
+
+  return respondJSON(request, response, 404, responseJson);
 };
 
-const notFound = (request, response, acceptedTypes) => {
-    const responseJson = {
-        message: 'The page you are looking for was not found.',
-        id: 'notFound',
-    };
-
-    // default (JSON) Path
-    const resString = JSON.stringify(responseJson);
-
-    return respond(request, response, 404, 'application/json', resString);
+// returns when Head request is not found
+const notFoundMeta = (request, response) => {
+  respondJSONMeta(request, response, 404);
 };
 
 module.exports = {
-    getUsers,
-    notReal,
-    addUser,
-    notFound,
+  getUsers,
+  getUsersMeta,
+  notReal,
+  notRealMeta,
+  addUser,
+  notFound,
+  notFoundMeta,
 };
